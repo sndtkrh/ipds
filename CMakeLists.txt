@@ -13,4 +13,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
 add_subdirectory(src)
 
 file(GLOB IPDSHEADERS ${PROJECT_SOURCE_DIR}/include/*.hpp)
+file(GLOB IPDSSVGHEADERS ${PROJECT_SOURCE_DIR}/include/svg/*.hpp)
 install(FILES ${IPDSHEADERS} DESTINATION include/ipds)
+install(FILES ${IPDSSVGHEADERS} DESTINATION include/ipds/svg)

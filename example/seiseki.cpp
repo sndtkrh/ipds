@@ -21,6 +21,7 @@ int main(){
     const auto & e_lambda = std::get<0>(e);
     const auto & e_vector = std::get<1>(e);
     cumulative_proportion += e_lambda / sum_of_lambda;
+    /*
     std::cout
     << "Standard deviation: " << std::sqrt(e_lambda)
     << ", Proportion of Variance: " << e_lambda / sum_of_lambda
@@ -32,5 +33,13 @@ int main(){
     }
     std::cout << std::endl;
     std::cout << std::endl;
+    */
   }
+
+  // svg test
+  ipds::SVGcanvas svg(1000,1000);
+  for(int i = 0; i < seiseki[0].size(); i++){
+    svg.circles.emplace_back(seiseki[0][i] * 10, seiseki[1][i] * 10, 2);
+  }
+  svg.save("a.svg");
 }

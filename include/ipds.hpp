@@ -6,5 +6,6 @@
 #include <cmath>
 #include "linear_algebra.hpp"
 #include "statistics.hpp"
+#include "svg/svg.hpp"
 
 #endif
