@@ -2,7 +2,6 @@
 #include <vector>
 #include <tuple>
 #include <algorithm>
-#include <cassert>
 #include <cmath>
 #include "matrix.hpp"
 
@@ -138,50 +137,42 @@ namespace ipds {
     return eigen;
   }
 
-  double covar(const std::vector<double> & x, const std::vector<double> & y) {
-    if( x.size() != y.size() ) {
-      throw "size is different";
+  double inner_product(const std::vector<double> & v, const std::vector<double> & u) {
+    if( v.size() != u.size() ) throw "inner_product: different dimmension!";
+    double a = 0;
+    for(std::size_t i = 0; i < v.size(); i++) {
+      a += v[i] * u[i];
     }
-    int n = x.size();
-    double ex = 0, ey = 0;
-    for(int i = 0; i < n; i++) {
-      ex += x[i];
-      ey += y[i];
-    }
-    ex = ex / n;
-    ey = ey / n;
-    double cov = 0;
-    for(int i = 0; i < n; i++) {
-      cov += (x[i] - ex) * (y[i] - ey);
-    }
-    cov = cov / n;
-    return cov;
+    return a;
   }
 
-  SymmetricMatrix var_covar_matrix(const std::vector<std::vector<double>> & data) {
-    int n = data.size();
-    std::vector<std::vector<double>> varcovar(n, std::vector<double>(n));
-    for(int i = 0; i < n; i++) {
-      for(int j = i; j < n; j++) {
-        varcovar[i][j] = varcovar[j][i] = covar(data[i], data[j]);
+  double norm(const std::vector<double> & v) {
+    return std::sqrt(inner_product(v,v));
+  }
+
+  std::vector<std::vector<double>> orthonormalization(const std::vector<std::vector<double>> & v) {
+    // Gram–Schmidt orthonormalization
+    // orthogonalize
+    std::vector<std::vector<double>> u(v.size());
+    std::vector<double> norms(v.size());
+    u[0] = v[0];
+    norms[0] = norm(u[0]);
+    for(std::size_t i = 1; i < v.size(); i++) {
+      u[i] = v[i];
+      for(std::size_t j = 0; j < i; j++) {
+        double coeff = inner_product(u[j], v[i]) / norms[j];
+        for(std::size_t k = 0; k < u[i].size(); k++) {
+          u[i][k] -= coeff * u[j][k];
+        }
+      }
+      norms[i] = norm(u[i]);
+    }
+    // normalize
+    for(std::size_t i = 0; i < u.size(); i++) {
+      for(std::size_t k = 0; k < u[i].size(); k++) {
+        u[i][k] /= norms[i];
       }
     }
-    return SymmetricMatrix(varcovar);
+    return u;
   }
-
-  SymmetricMatrix corel_matrix(const std::vector<std::vector<double>> & data) {
-    int n = data.size();
-    std::vector<std::vector<double>> corel(n, std::vector<double>(n));
-    std::vector<double> sigma(n);
-    for(int i = 0; i < n; i++) {
-      sigma[i] = std::sqrt(covar(data[i], data[i]));
-    }
-    for(int i = 0; i < n; i++) {
-      for(int j = i; j < n; j++) {
-        corel[i][j] = corel[j][i] = covar(data[i], data[j]) / sigma[i] / sigma[j];
-      }
-    }
-    return SymmetricMatrix(corel);
-  }
-
 }

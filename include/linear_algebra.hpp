@@ -26,9 +26,9 @@ namespace ipds {
     std::vector<std::tuple<double, std::vector<double>>> get_eigen() const;
   };
 
-  double covar(const std::vector<double> & x, const std::vector<double> & y);
-  SymmetricMatrix var_covar_matrix(const std::vector<std::vector<double>> & data);
-  SymmetricMatrix corel_matrix(const std::vector<std::vector<double>> & data);
+  double inner_product(const std::vector<double> & v, const std::vector<double> & u);
+  double norm(const std::vector<double> & v);
+  std::vector<std::vector<double>> orthonormalization(const std::vector<std::vector<double>> & v);
 }
 
 #endif

@@ -4,6 +4,7 @@
 #include <vector>
 #include <tuple>
 #include <cmath>
-#include "matrix.hpp"
+#include "linear_algebra.hpp"
+#include "statistics.hpp"
 
 #endif
