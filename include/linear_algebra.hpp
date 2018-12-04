@@ -26,9 +26,14 @@ namespace ipds {
     std::vector<std::tuple<double, std::vector<double>>> get_eigen() const;
   };
 
+  std::vector<double> operator + (const std::vector<double> & a, const std::vector<double> & b);
+  std::vector<double> operator * (const double lambda, const std::vector<double> & a);
+
   double inner_product(const std::vector<double> & v, const std::vector<double> & u);
   double norm(const std::vector<double> & v);
-  std::vector<std::vector<double>> orthonormalization(const std::vector<std::vector<double>> & v);
+  std::vector<std::vector<double>> orthonormalize(const std::vector<std::vector<double>> & v);
+  std::vector<std::vector<double>> transpose(const std::vector<std::vector<double>> & a);
+  std::vector<double> project(const std::vector<double> & point, const std::vector<std::vector<double>> & subspace);
 }
 
 #endif

@@ -5,7 +5,8 @@ namespace ipds {
 
   struct Circle {
     double cx, cy, r;
-    Circle(double cx, double cy, double r);
+    std::string color;
+    Circle(double cx, double cy, double r, std::string color);
     std::string get_svg_string() const;
   };
 

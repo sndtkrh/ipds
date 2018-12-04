@@ -74,4 +74,9 @@ namespace ipds {
     }
     return SymmetricMatrix(corel);
   }
+
+  std::vector<std::tuple<double, std::vector<double>>> pca(const std::vector<std::vector<double>> & data) {
+    ipds::SymmetricMatrix seiseki_corel = ipds::corel_matrix(data);
+    return seiseki_corel.get_eigen();
+  }
 }

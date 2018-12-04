@@ -150,7 +150,25 @@ namespace ipds {
     return std::sqrt(inner_product(v,v));
   }
 
-  std::vector<std::vector<double>> orthonormalization(const std::vector<std::vector<double>> & v) {
+
+  std::vector<double> operator + (const std::vector<double> & a, const std::vector<double> & b) {
+    if( a.size() != b.size() ) throw "operator +: size is different";
+    std::vector<double> c;
+    for(std::size_t i = 0; i < a.size(); i++) {
+      c.push_back(a[i] + b[i]);
+    }
+    return c;
+  }
+
+  std::vector<double> operator * (const double lambda, const std::vector<double> & a) {
+    std::vector<double> b;
+    for(std::size_t i = 0; i < a.size(); i++) {
+      b.push_back(lambda * a[i]);
+    }
+    return b;
+  }
+
+  std::vector<std::vector<double>> orthonormalize(const std::vector<std::vector<double>> & v) {
     // Gram–Schmidt orthonormalization
     // orthogonalize
     std::vector<std::vector<double>> u(v.size());
@@ -169,10 +187,33 @@ namespace ipds {
     }
     // normalize
     for(std::size_t i = 0; i < u.size(); i++) {
+      u[i] = (1/norms[i]) * u[i];
+      /*
       for(std::size_t k = 0; k < u[i].size(); k++) {
         u[i][k] /= norms[i];
       }
+      */
     }
     return u;
+  }
+
+  std::vector<std::vector<double>> transpose(const std::vector<std::vector<double>> & a) {
+    std::vector<std::vector<double>> aT(a[0].size(), std::vector<double>(a.size()));
+    for(std::size_t i = 0; i < a.size(); i++) {
+      if( a[0].size() != a[i].size() ) throw "transpose: size is different";
+      for(std::size_t j = 0; j < a[i].size(); j++) {
+        aT[j][i] = a[i][j];
+      }
+    }
+    return aT;
+  }
+
+  std::vector<double> project(const std::vector<double> & point, const std::vector<std::vector<double>> & basis_of_subspace) {
+    auto e = orthonormalize(basis_of_subspace);
+    std::vector<double> projected_point(e.size());
+    for(std::size_t k = 0; k < e.size(); k++) {
+      projected_point[k] = inner_product(point, e[k]);
+    }
+    return projected_point;
   }
 }

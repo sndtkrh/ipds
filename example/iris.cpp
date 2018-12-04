@@ -2,21 +2,23 @@
 #include <ipds/ipds.hpp>
 
 int main(){
-  std::vector<std::vector<double>> seiseki(9);
-  for(std::size_t i = 0; i < 166; i++) {
-    for(std::size_t j = 0; j < 9; j++) {
+  int data_dim = 4;
+  int data_n = 150;
+  std::vector<std::vector<double>> iris(data_dim);
+  for(std::size_t i = 0; i < data_n; i++) {
+    for(std::size_t j = 0; j < iris.size(); j++) {
       double p;
       std::cin >> p;
-      seiseki[j].push_back(p);
+      iris[j].push_back(p);
     }
   }
 
-  for(std::size_t j = 0; j < seiseki.size(); j++) {
-    seiseki[j] = ipds::standardize(seiseki[j]);
+  for(std::size_t j = 0; j < iris.size(); j++) {
+    iris[j] = ipds::standardize(iris[j]);
   }
 
   // Do PCA
-  auto eigen = ipds::pca(seiseki);
+  auto eigen = ipds::pca(iris);
   double sum_of_lambda = 0;
   for(const auto & e : eigen) {
     sum_of_lambda += std::get<0>(e);
@@ -40,22 +42,23 @@ int main(){
   }
 
   // take 2-dim subspace and project data
-  auto data_points = ipds::transpose(seiseki);
+  auto data_points = ipds::transpose(iris);
   auto basis = {std::get<1>(eigen[0]), std::get<1>(eigen[1])};
   int svgwh = 1000;
   ipds::SVGcanvas svg(svgwh,svgwh);
   int i = 0;
   for(const auto & p : data_points) {
     auto projected_p = ipds::project(p, basis);
-    svg.circles.emplace_back(svgwh/2 + projected_p[0] * 50, svgwh/2 + projected_p[1] * 50, 2, ((i == 3) || (i == 129)) ? "green" : "black");
+    std::string color = (i < 50) ? "red" : ((i < 100) ? "green" : "blue");
+    svg.circles.emplace_back(svgwh/2 + projected_p[0] * 50, svgwh/2 + projected_p[1] * 50, 2, color);
     std::cout << "i=" << i++ << " (" << projected_p[0] << ", " << projected_p[1] << ") " << std::endl;
   }
-  for(int i = 0; i < 9; i++) {
-    std::vector<double> e(9, 0);
+  for(int i = 0; i < data_dim; i++) {
+    std::vector<double> e(data_dim, 0);
     e[i] = 5;
     auto p = ipds::project(e, basis);
-    svg.circles.emplace_back(svgwh/2 + p[0] * 50, svgwh/2 + p[1] * 50, 2, "red");
+    svg.circles.emplace_back(svgwh/2 + p[0] * 50, svgwh/2 + p[1] * 50, 2, "black");
   }
-  svg.circles.emplace_back(svgwh/2, svgwh/2, 2, "blue");
+  svg.circles.emplace_back(svgwh/2, svgwh/2, 2, "black");
   svg.save("a.svg");
 }

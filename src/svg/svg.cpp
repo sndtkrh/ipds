@@ -5,10 +5,10 @@
 #include "svg/svg.hpp"
 
 namespace ipds {
-  Circle::Circle(double cx, double cy, double r) : cx(cx), cy(cy), r(r) {}
+  Circle::Circle(double cx, double cy, double r, std::string color) : cx(cx), cy(cy), r(r), color(color) {}
   std::string Circle::get_svg_string() const {
     std::stringstream ss;
-    ss << "<circle cx=\"" << cx << "\" cy=\"" << cy << "\" r=\"" << r << "\" ></circle>";
+    ss << "<circle cx=\"" << cx << "\" cy=\"" << cy << "\" r=\"" << r << "\" fill=\"" << color << "\" ></circle>";
     return ss.str();
   }
 

@@ -8,6 +8,7 @@ namespace ipds {
   std::vector<double> standardize(const std::vector<double> & x);
   SymmetricMatrix var_covar_matrix(const std::vector<std::vector<double>> & data);
   SymmetricMatrix corel_matrix(const std::vector<std::vector<double>> & data);
+  std::vector<std::tuple<double, std::vector<double>>> pca(const std::vector<std::vector<double>> & data);
 }
 
 #endif
