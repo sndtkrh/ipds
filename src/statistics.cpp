@@ -106,17 +106,15 @@ namespace ipds {
   }
 
   void plot_point_2D (std::tuple<double, double> point, SVGcanvas & svg, double scale, std::string color, double point_radius) {
-    double w, h, x, y;
-    std::tie(w,h) = svg.get_canvas_size();
-    std::tie(x,y) = point;
+    auto [w, h] = svg.get_canvas_size();
+    auto [x, y] = point;
     svg.circles.emplace_back(w / 2 + scale * x, h / 2 + scale * y, point_radius, color);
   }
 
   void plot_line_2D (std::tuple<double, double> point_begin, std::tuple<double, double> point_end, SVGcanvas & svg, double scale, std::string color, double stroke_width) {
-    double w, h, x1, y1, x2, y2;
-    std::tie(w, h) = svg.get_canvas_size();
-    std::tie(x1, y1) = point_begin;
-    std::tie(x2, y2) = point_end;
+    auto [w, h] = svg.get_canvas_size();
+    auto [x1, y1] = point_begin;
+    auto [x2, y2] = point_end;
     svg.lines.emplace_back(w / 2 + scale * x1, h / 2 + scale * y1, w / 2 + scale * x2, h / 2 + scale * y2, color, stroke_width);
   }
 }

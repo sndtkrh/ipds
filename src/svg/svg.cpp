@@ -26,6 +26,18 @@ namespace ipds {
     return ss.str();
   }
 
+  Text::Text(std::string text, double x, double y, double font_size, std::string color)
+    : text(text), x(x), y(y), font_size(font_size), color(color) {}
+  std::string Text::get_svg_string() const {
+    std::stringstream ss;
+    ss << "<text x=\"" << x << "\" y=\"" << y
+      << "\" font-size=\"" << font_size
+      << "\" fill=\"" << color << "\" >"
+      << text
+      << "</text>";
+    return ss.str();
+  }
+
   SVGcanvas::SVGcanvas(double w, double h) : width(w), height(h) {}
   std::string SVGcanvas::get_svg_string() const {
     std::stringstream ss;
@@ -38,6 +50,9 @@ namespace ipds {
     }
     for(const Circle & circle : circles) {
       ss << circle.get_svg_string() << "\n";
+    }
+    for(const Text & text : texts) {
+      ss << text.get_svg_string() << "\n";
     }
 
     ss << "</svg>\n";

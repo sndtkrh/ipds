@@ -18,9 +18,19 @@ namespace ipds {
     std::string get_svg_string() const;
   };
 
+  struct Text {
+    std::string text;
+    double x, y;
+    double font_size;
+    std::string color;
+    Text(std::string text, double x, double y, double font_size, std::string color = "black");
+    std::string get_svg_string() const;
+  };
+
   struct SVGcanvas {
-    std::vector<Circle> circles;
     std::vector<Line> lines;
+    std::vector<Circle> circles;
+    std::vector<Text> texts;
     SVGcanvas(double w, double h);
     std::string get_svg_string() const;
     void save(std::string filename) const;

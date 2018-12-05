@@ -39,6 +39,7 @@ int main(){
     e[i] = 1;
     auto p = ipds::project(e, basis);
     ipds::plot_line_2D({0, 0}, {p[0], p[1]}, svg, scale);
+    svg.texts.emplace_back(std::to_string(i), svgwh / 2 + p[0] * scale, svgwh / 2 + p[1] * scale, 10);
   }
-  svg.save("a.svg");
+  svg.save("iris.svg");
 }

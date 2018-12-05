@@ -3,7 +3,7 @@
 #include <tuple>
 #include <algorithm>
 #include <cmath>
-#include "matrix.hpp"
+#include "linear_algebra.hpp"
 
 namespace ipds {
 
