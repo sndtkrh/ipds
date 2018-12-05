@@ -2,6 +2,7 @@
 
 ## Overview
 This is a library for statistical analysis in modern C++.
+This library *does not* depend on third party libraries.
 This library supports following operations:
 - basic statistical functions
   - average
