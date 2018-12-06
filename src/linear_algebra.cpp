@@ -137,6 +137,51 @@ namespace ipds {
     return eigen;
   }
 
+  std::tuple<SymmetricMatrix, std::vector<std::vector<double>>> SymmetricMatrix::tridiagonalize() const {
+    std::size_t n = mat.size();
+    auto T = mat;
+    std::vector<std::vector<double>> vs;
+    for(std::size_t i = 0; i < n - 2; i++) {
+      auto [s, v] = householder(T[i], i + 1);
+      vs.push_back(v);
+      // transform T
+      T[i][i + 1] = T[i + 1][i] = s;
+      for(std::size_t j = i + 2; j < T.size(); j++) {
+        T[i][j] = T[j][i] = 0;
+      }
+      std::vector<double> d(T.size() - i - 1, 0);
+      std::vector<double> g(T.size() - i - 1, 0);
+      for(std::size_t k = 0; k < d.size(); k++) {
+        for(std::size_t l = 0; l < d.size(); l++) {
+          d[k] += T[i + 1 + k][i + 1 + l] * v[i + 1 + l];
+        }
+      }
+      double tmp = 0;
+      for(std::size_t k = 0; k < d.size(); k++) {
+        tmp += v[i + 1 + k] * d[k];
+      }
+      for(std::size_t k = 0; k < g.size(); k++) {
+        g[k] = 2 * (d[k] - tmp * v[i + 1 + k]);
+      }
+      for(std::size_t k = 0; k < g.size(); k++) {
+        for(std::size_t l = 0; l < g.size();l++) {
+          T[i + 1 + k][i + 1 + l] -= g[k] * v[i + 1 + l] + v[i + 1 + k] * g[l];
+        }
+      }
+    }
+    return {SymmetricMatrix(T), vs};
+  }
+
+  std::tuple<double, std::vector<double>> householder(const std::vector<double> & u, const std::size_t idx) {
+    std::vector<double> v = u;
+    for(std::size_t i = 0; i < idx; i++) v[i] = 0;
+    double s = ((v[idx] >= 0) ? 1 : -1) * norm(v);
+    v[idx] -= s;
+    double n = norm(v);
+    for(auto & a : v) { a /= n; }
+    return {s, v};
+  }
+
   double inner_product(const std::vector<double> & v, const std::vector<double> & u) {
     if( v.size() != u.size() ) throw "inner_product: different dimmension!";
     double a = 0;

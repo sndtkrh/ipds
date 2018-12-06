@@ -23,8 +23,35 @@ namespace ipds {
   class SymmetricMatrix : public SquareMatrix {
   public:
     SymmetricMatrix(const std::vector<std::vector<double>> & mat_);
+
+    /*
+    * get_eigen:
+    *   return value: {(e_val, e_vec)}
+    *     - e_val is the eigen max_value.
+    *     - e_vec is the eigen vector.
+    *     - the returned vector is sorted: |e_val_0| >= ... >= |e_val_n|.
+    */
     std::vector<std::tuple<double, std::vector<double>>> get_eigen() const;
+
+    /*
+    * tridiagonalize:
+    *   return value: (T, {v})
+    *     - T is the tridiagonal matrix of mat.
+    *     - vs are the vector representing householder transformations.
+    */
+    std::tuple<SymmetricMatrix, std::vector<std::vector<double>>> tridiagonalize() const;
   };
+
+  /*
+  * householder:
+  *   argument: u, idx
+  *     - u is a vector that you want to transform.
+  *     - idx is for tridiagonalize.
+  *   return value: (s, v)
+  *     - s stisfies [s 0 ... 0]^T = Qu whre Q := I - 2v(v^T).
+  *     - v is the normal vector of householder transformation.
+  */
+  std::tuple<double, std::vector<double>> householder(const std::vector<double> & u, const std::size_t idx = 0);
 
   std::vector<double> operator + (const std::vector<double> & a, const std::vector<double> & b);
   std::vector<double> operator * (const double lambda, const std::vector<double> & a);
