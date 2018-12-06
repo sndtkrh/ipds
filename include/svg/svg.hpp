@@ -38,5 +38,8 @@ namespace ipds {
   private:
     double width, height;
   };
+
+  void plot_point_2D (std::tuple<double, double> point, SVGcanvas & svg, double scale = 1, std::string color = "black", double point_radius = 1);
+  void plot_line_2D (std::tuple<double, double> point_begin, std::tuple<double, double> point_end, SVGcanvas & svg, double scale = 1, std::string color = "black", double stroke_width = 1);
 }
 #endif

@@ -13,9 +13,7 @@ int main(){
     }
   }
 
-  for(std::size_t j = 0; j < iris.size(); j++) {
-    iris[j] = ipds::standardize(iris[j]);
-  }
+  iris = ipds::standardize(ipds::polynomial_features(ipds::standardize(iris), 1));
 
   // Do PCA
   auto eigen = ipds::pca(iris);
@@ -26,7 +24,7 @@ int main(){
   auto basis = {std::get<1>(eigen[0]), std::get<1>(eigen[1])};
   int svgwh = 400;
   double scale = 50;
-  ipds::SVGcanvas svg(svgwh,svgwh);
+  ipds::SVGcanvas svg(svgwh, svgwh);
   int i = 0;
   for(const auto & p : data_points) {
     auto projected_p = ipds::project(p, basis);
@@ -34,8 +32,8 @@ int main(){
     ipds::plot_point_2D({projected_p[0], projected_p[1]}, svg, scale, color);
     std::cout << "i=" << i++ << " (" << projected_p[0] << ", " << projected_p[1] << ") " << std::endl;
   }
-  for(int i = 0; i < data_dim; i++) {
-    std::vector<double> e(data_dim, 0);
+  for(int i = 0; i < iris.size(); i++) {
+    std::vector<double> e(iris.size(), 0);
     e[i] = 1;
     auto p = ipds::project(e, basis);
     ipds::plot_line_2D({0, 0}, {p[0], p[1]}, svg, scale);

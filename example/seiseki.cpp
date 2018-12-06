@@ -12,9 +12,7 @@ int main(){
     }
   }
 
-  for(std::size_t j = 0; j < seiseki.size(); j++) {
-    seiseki[j] = ipds::standardize(seiseki[j]);
-  }
+  seiseki = ipds::standardize(ipds::polynomial_features(ipds::standardize(seiseki)));
 
   // Do PCA
   auto eigen = ipds::pca(seiseki);
@@ -24,7 +22,7 @@ int main(){
   auto data_points = ipds::transpose(seiseki);
   auto basis = {std::get<1>(eigen[0]), std::get<1>(eigen[1])};
   int svgwh = 1000;
-  double scale = 70;
+  double scale = 50;
   ipds::SVGcanvas svg(svgwh,svgwh);
   int i = 0;
   for(const auto & p : data_points) {
@@ -32,12 +30,12 @@ int main(){
     ipds::plot_point_2D({projected_p[0], projected_p[1]}, svg, scale, "black", 2);
     std::cout << "i=" << i++ << " (" << projected_p[0] << ", " << projected_p[1] << ") " << std::endl;
   }
-  for(int i = 0; i < data_dim; i++) {
-    std::vector<double> e(data_dim, 0);
+  for(int i = 0; i < seiseki.size(); i++) {
+    std::vector<double> e(seiseki.size(), 0);
     e[i] = 1;
     auto p = ipds::project(e, basis);
-    ipds::plot_line_2D({0, 0}, {p[0], p[1]}, svg, scale * 2, "blue");
-    svg.texts.emplace_back(std::to_string(i), svgwh / 2 + p[0] * scale * 2, svgwh / 2 + p[1] * scale * 2, 10, "blue");
+    ipds::plot_line_2D({0, 0}, {p[0], p[1]}, svg, scale * 10, "blue");
+    svg.texts.emplace_back(std::to_string(i), svgwh / 2 + p[0] * scale * 10, svgwh / 2 + p[1] * scale * 10, 5, "blue");
   }
   svg.save("seiseki.svg");
 }

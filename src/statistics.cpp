@@ -5,7 +5,6 @@
 #include <cmath>
 #include "linear_algebra.hpp"
 #include "statistics.hpp"
-#include "svg/svg.hpp"
 
 namespace ipds {
   double covar(const std::vector<double> & x, const std::vector<double> & y) {
@@ -48,6 +47,14 @@ namespace ipds {
       y.push_back( (v - avg) / sigma );
     }
     return y;
+  }
+
+  std::vector<std::vector<double>> standardize(const std::vector<std::vector<double>> & data) {
+    std::vector<std::vector<double>> standardized_data;
+    for(const auto & x : data) {
+      standardized_data.push_back(standardize(x));
+    }
+    return standardized_data;
   }
 
   SymmetricMatrix var_covar_matrix(const std::vector<std::vector<double>> & data) {
@@ -103,18 +110,5 @@ namespace ipds {
       std::cout << std::endl;
       std::cout << std::endl;
     }
-  }
-
-  void plot_point_2D (std::tuple<double, double> point, SVGcanvas & svg, double scale, std::string color, double point_radius) {
-    auto [w, h] = svg.get_canvas_size();
-    auto [x, y] = point;
-    svg.circles.emplace_back(w / 2 + scale * x, h / 2 + scale * y, point_radius, color);
-  }
-
-  void plot_line_2D (std::tuple<double, double> point_begin, std::tuple<double, double> point_end, SVGcanvas & svg, double scale, std::string color, double stroke_width) {
-    auto [w, h] = svg.get_canvas_size();
-    auto [x1, y1] = point_begin;
-    auto [x2, y2] = point_end;
-    svg.lines.emplace_back(w / 2 + scale * x1, h / 2 + scale * y1, w / 2 + scale * x2, h / 2 + scale * y2, color, stroke_width);
   }
 }
