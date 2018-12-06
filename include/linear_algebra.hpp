@@ -33,7 +33,8 @@ namespace ipds {
   double norm(const std::vector<double> & v);
   std::vector<std::vector<double>> orthonormalize(const std::vector<std::vector<double>> & v);
   std::vector<std::vector<double>> transpose(const std::vector<std::vector<double>> & a);
-  std::vector<double> project(const std::vector<double> & point, const std::vector<std::vector<double>> & subspace);
+  std::vector<double> project(const std::vector<double> & point, const std::vector<std::vector<double>> & basis_of_subspace);
+  std::vector<std::vector<double>> project(const std::vector<std::vector<double>> & points, const std::vector<std::vector<double>> & basis_of_subspace);
 }
 
 #endif

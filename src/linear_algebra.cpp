@@ -216,4 +216,12 @@ namespace ipds {
     }
     return projected_point;
   }
+
+  std::vector<std::vector<double>> project(const std::vector<std::vector<double>> & points, const std::vector<std::vector<double>> & basis_of_subspace) {
+    std::vector<std::vector<double>> projected_points;
+    for(const auto & p : points) {
+      projected_points.push_back(project(p, basis_of_subspace));
+    }
+    return projected_points;
+  }
 }
