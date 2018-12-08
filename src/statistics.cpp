@@ -70,6 +70,7 @@ namespace ipds {
 
   SymmetricMatrix corel_matrix(const std::vector<std::vector<double>> & data) {
     int n = data.size();
+    std::cout << "n=" << n << std::endl;
     std::vector<std::vector<double>> corel(n, std::vector<double>(n));
     std::vector<double> sigma(n);
     for(int i = 0; i < n; i++) {
@@ -85,7 +86,7 @@ namespace ipds {
 
   std::vector<std::tuple<double, std::vector<double>>> pca(const std::vector<std::vector<double>> & data) {
     ipds::SymmetricMatrix seiseki_corel = ipds::corel_matrix(data);
-    return seiseki_corel.get_eigen();
+    return seiseki_corel.get_eigen_householder_binarysearch();
   }
 
   void print_pca_result(const std::vector<std::tuple<double, std::vector<double>>> & pca_result) {

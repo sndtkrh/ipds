@@ -65,7 +65,8 @@ namespace ipds {
     }
   }
 
-  std::vector<std::tuple<double, std::vector<double>>> SymmetricMatrix::get_eigen() const {
+  std::vector<std::tuple<double, std::vector<double>>> SymmetricMatrix::get_eigen_yacobi() const {
+    /* /!\ This code may have bugs. The result may be wrong when the matrix size is 4x4 */
     int n = row;
     if( n == 1 ) { return { {mat[0][0], {1}} }; }
     std::vector<std::vector<double>> a = mat;
@@ -137,6 +138,131 @@ namespace ipds {
     return eigen;
   }
 
+  std::vector<std::tuple<double, std::vector<double>>> SymmetricMatrix::get_eigen_householder_binarysearch() const {
+    if(mat.size() == 1) return {{mat[0][0], {1}}};
+    auto [T, vs] = tridiagonalize();
+    std::size_t size = T.rows();
+
+    std::cout << "tridiagonalized" << std::endl;
+
+    /*
+    * p:
+    *   argument: l
+    *   return value: ps
+    *     - ps[ps.size() - k] = det (lI - T)_k where X_l is the k-th principal submatrix of X.
+    */
+    auto p = [&T, size](double lambda) -> std::vector<double> {
+      std::vector<double> ps(size);
+      ps[0] = T[0][0] - lambda;
+      ps[1] = (T[1][1] - lambda) * ps[0] - T[1][0] * T[1][0];
+      for(std::size_t i = 2; i < ps.size(); i++) {
+        double alpha = T[i][i], beta = T[i][i - 1];
+        ps[i] = (alpha - lambda) * ps[i - 1] - beta * beta * ps[i - 2];
+      }
+      ps.insert(ps.begin(), 1);
+      return ps;
+    };
+
+    /*
+    * count_alternation:
+    *   argument: v
+    *   return value: c
+    *     - c is the number of alternation of signs of v.
+    */
+    auto count_alternation = [](const std::vector<double> & v) -> unsigned int {
+      unsigned int c = 0;
+      for(std::size_t i = 0; i < v.size(); i++) {
+        if(-eps < v[i] && v[i] < eps) {
+          if(v[i - 1] * v[i + 1] < -eps){ c++; }
+          i++;
+        } else {
+          if(v[i] * v[i-1] < -eps){ c++; }
+        }
+      }
+      return c;
+    };
+
+    // bound is the bound of eigen values by Gerschgorin's theorem.
+    double bound = 0;
+    for(std::size_t i = 0; i < size; i++) {
+      double t = 0;
+      for(std::size_t j = std::max(i - 1, static_cast<std::size_t>(0)); j < std::min(i + 1, size); j++) {
+        t += std::abs(T[i][j]);
+      }
+      bound = std::max(t, bound);
+    }
+
+    // lower(upper)[k] is the lower(upper) bound of the k-th eigen value.
+    std::vector<double> lower(size, -bound);
+    std::vector<double> upper(size, bound);
+    // find the eigen values by binary search.
+    for(int z = 0; z < 100; z++) {
+      for(std::size_t k = 0; k < lower.size(); k++) {
+        double m = (lower[k] + upper[k]) / 2;
+        unsigned int n = count_alternation(p(m));
+        if(n <= k) {
+          lower[k] = m;
+        } else {
+          upper[k] = m;
+        }
+      }
+    }
+
+    // sort by absolute value of eigen values
+    std::sort(lower.begin(), lower.end(), [](double a, double b){ return std::abs(a) < std::abs(b); });
+    std::reverse(lower.begin(), lower.end());
+
+    std::cout << "finished binary serach" << std::endl;
+    for(auto a : lower) {
+      std::cout << a << " ";
+    }
+    std::cout << std::endl;
+
+    // get the eigen vectors of T
+    auto get_eigen_vec = [&T, size](double lambda) {
+      std::vector<double> v(size, 0);
+      // initialize
+      v[0] = 1;
+      v[1] = - (T[0][0] - lambda) * v[0] / T[0][1];
+      for(std::size_t k = 1; k < v.size() - 1; k++) {
+        v[k + 1] = - (T[k][k - 1] * v[k - 1] + (T[k][k] - lambda) * v[k]) / T[k][k + 1];
+      }
+      return (1/norm(v)) * v;
+    };
+    std::vector<std::vector<double>> eigen_vectors;
+    for(std::size_t i = 0; i < lower.size(); i++) {
+      eigen_vectors.push_back(get_eigen_vec(lower[i]));
+    }
+
+    std::cout << "got the eigen vectors of T" << std::endl;
+
+    // get the eigen vectors that we want by inverse Householder transformation
+    int i = 0;
+    for(auto & eigen_vec : eigen_vectors) {
+      std::cout << "#eig = " << i++ << std::endl;
+      for(std::size_t i = vs.size() - 1; ; i--) {
+        auto & v = vs[i];
+        std::size_t idx = i + 1;
+        std::vector<double> tmp(size - idx, 0);
+        for(std::size_t k = idx; k < size; k++) {
+          for(std::size_t l = idx; l < size; l++) {
+            tmp[k - idx] += (((k == l) ? 1 : 0) - 2 * v[k] * v[l]) * eigen_vec[l];
+          }
+        }
+        for(std::size_t k = idx; k < size; k++) {
+          eigen_vec[k] = tmp[k - idx];
+        }
+        if( i == 0 ) break;
+      }
+    }
+
+    std::vector<std::tuple<double, std::vector<double>>> ret;
+    for(std::size_t i = 0; i < lower.size(); i++) {
+      ret.emplace_back(lower[i], eigen_vectors[i]);
+    }
+    return ret;
+  }
+
   std::tuple<SymmetricMatrix, std::vector<std::vector<double>>> SymmetricMatrix::tridiagonalize() const {
     std::size_t n = mat.size();
     auto T = mat;
@@ -144,7 +270,6 @@ namespace ipds {
     for(std::size_t i = 0; i < n - 2; i++) {
       auto [s, v] = householder(T[i], i + 1);
       vs.push_back(v);
-      // transform T
       T[i][i + 1] = T[i + 1][i] = s;
       for(std::size_t j = i + 2; j < T.size(); j++) {
         T[i][j] = T[j][i] = 0;
@@ -175,10 +300,9 @@ namespace ipds {
   std::tuple<double, std::vector<double>> householder(const std::vector<double> & u, const std::size_t idx) {
     std::vector<double> v = u;
     for(std::size_t i = 0; i < idx; i++) v[i] = 0;
-    double s = ((v[idx] >= 0) ? 1 : -1) * norm(v);
+    double s = ((v[idx] >= 0) ? -1 : 1) * norm(v);
     v[idx] -= s;
-    double n = norm(v);
-    for(auto & a : v) { a /= n; }
+    v = (1/norm(v)) * v;
     return {s, v};
   }
 
@@ -213,6 +337,17 @@ namespace ipds {
     return b;
   }
 
+  std::vector<double> operator * (const Matrix & mat, const std::vector<double> & a) {
+    if( mat.cols() != a.size() ) throw "size is different";
+    std::vector<double> u(mat.rows(), 0);
+    for(std::size_t i = 0; i < mat.rows(); i++) {
+      for(std::size_t j = 0; j < mat.cols(); j++) {
+        u[i] += mat[i][j] * a[j];
+      }
+    }
+    return u;
+  }
+
   std::vector<std::vector<double>> orthonormalize(const std::vector<std::vector<double>> & v) {
     // Gram–Schmidt orthonormalization
     // orthogonalize
@@ -233,11 +368,6 @@ namespace ipds {
     // normalize
     for(std::size_t i = 0; i < u.size(); i++) {
       u[i] = (1/norms[i]) * u[i];
-      /*
-      for(std::size_t k = 0; k < u[i].size(); k++) {
-        u[i][k] /= norms[i];
-      }
-      */
     }
     return u;
   }

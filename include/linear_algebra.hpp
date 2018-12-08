@@ -31,7 +31,8 @@ namespace ipds {
     *     - e_vec is the eigen vector.
     *     - the returned vector is sorted: |e_val_0| >= ... >= |e_val_n|.
     */
-    std::vector<std::tuple<double, std::vector<double>>> get_eigen() const;
+    std::vector<std::tuple<double, std::vector<double>>> get_eigen_yacobi() const;
+    std::vector<std::tuple<double, std::vector<double>>> get_eigen_householder_binarysearch() const;
 
     /*
     * tridiagonalize:
@@ -55,6 +56,7 @@ namespace ipds {
 
   std::vector<double> operator + (const std::vector<double> & a, const std::vector<double> & b);
   std::vector<double> operator * (const double lambda, const std::vector<double> & a);
+  std::vector<double> operator * (const Matrix & mat, const std::vector<double> & a);
 
   double inner_product(const std::vector<double> & v, const std::vector<double> & u);
   double norm(const std::vector<double> & v);
