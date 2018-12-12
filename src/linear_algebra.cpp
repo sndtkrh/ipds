@@ -3,308 +3,25 @@
 #include <tuple>
 #include <algorithm>
 #include <cmath>
+
+#include <boost/numeric/ublas/fwd.hpp>
+#include <boost/numeric/ublas/matrix.hpp>
+#include <boost/numeric/ublas/symmetric.hpp>
+#define BOOST_NUMERIC_BINDINGS_USE_CLAPACK
+#include <boost/numeric/bindings/lapack/syevd.hpp>
+#include <boost/numeric/bindings/traits/std_vector.hpp>
+#include <boost/numeric/bindings/traits/ublas_matrix.hpp>
+#undef  BOOST_NUMERIC_BINDINGS_USE_CLAPACK
+#include <boost/numeric/ublas/io.hpp>
+#include <boost/numeric/ublas/matrix.hpp>
+#include <boost/numeric/ublas/matrix_proxy.hpp>
+#include <boost/numeric/ublas/symmetric.hpp>
+
 #include "linear_algebra.hpp"
 
 namespace ipds {
 
   const double eps = 1e-13;
-
-  std::ostream & operator<<(std::ostream & os, const Matrix & mat) {
-    for(std::size_t i = 0; i < mat.rows(); i++) {
-      for(std::size_t j = 0; j < mat.cols(); j++) {
-        os << mat[i][j] << " ";
-      }
-      if(i != mat.rows() - 1) {
-        os << "\n";
-      }
-    }
-    return os;
-  }
-
-  Matrix::Matrix(const std::vector<std::vector<double>> & mat_) {
-    mat = mat_;
-    row = mat_.size();
-    col = mat_[0].size();
-    // check whether mat_ is well-formed
-    for(std::size_t i = 0; i < row; i++) {
-      if(row != mat_[i].size()) {
-        throw "matrix error: ill-formed";
-      }
-    }
-  }
-  const std::vector<double> & Matrix::operator[] (int i) const { return mat[i]; }
-  std::size_t Matrix::rows() const { return row; }
-  std::size_t Matrix::cols() const { return col; }
-
-  std::vector<double> Matrix::operator() (const std::vector<double> & v) const {
-    if( v.size() != col ) throw "matrix error: size is different";
-    std::vector<double> u(row, 0);
-    for(std::size_t i = 0; i < row; i++) {
-      for(std::size_t j = 0; j < col; j++) {
-        u[i] += v[i] * mat[i][j];
-      }
-    }
-    return u;
-  }
-
-  SquareMatrix::SquareMatrix(const std::vector<std::vector<double>> & mat_) : Matrix(mat_) {
-    // check whether mat_ is square matrix
-    if(row != col) {
-      throw "matrix error: not square";
-    }
-  }
-
-  SymmetricMatrix::SymmetricMatrix(const std::vector<std::vector<double>> & mat_) : SquareMatrix(mat_) {
-    // check whether mat_ is symmetric
-    for(std::size_t i = 0; i < row; i++) {
-      for(std::size_t j = i + 1; j < col; j++) {
-        if(std::abs(mat_[i][j] - mat_[j][i]) > eps) {
-          throw "matrix error: not symmetric";
-        }
-      }
-    }
-  }
-
-  std::vector<std::tuple<double, std::vector<double>>> SymmetricMatrix::get_eigen_yacobi() const {
-    /* /!\ This code may have bugs. The result may be wrong when the matrix size is 4x4 */
-    int n = row;
-    if( n == 1 ) { return { {mat[0][0], {1}} }; }
-    std::vector<std::vector<double>> a = mat;
-    std::vector<std::vector<double>> eigen_vectors(n, std::vector<double>(n, 0));
-    for(int i = 0; i < n; i++){ eigen_vectors[i][i] = 1; }
-
-    auto givens_rotate = [&]() {
-      int p, q;
-      double max_value = -1;
-      // find argmax_{(p,q), p<q} {|a[p][q]|}
-      for(int i = 0; i < n; i++) {
-        for(int j = i + 1; j < n; j++) {
-          if( max_value < std::abs(a[i][j]) ) {
-            p = i;
-            q = j;
-            max_value = std::abs(a[i][j]);
-          }
-        }
-      }
-      std::vector<double> ap = a[p], aq = a[q];
-      double app = a[p][p], aqq = a[q][q], apq = a[p][q];
-      double theta = 0.5 * std::atan(-2 * apq / (app - aqq)); // angle of rotation
-      double sin_theta = std::sin(theta), sin_2theta = std::sin(2 * theta);
-      double cos_theta = std::cos(theta), cos_2theta = std::cos(2 * theta);
-      // rotate
-      for(int i = 0; i < n; i++) {
-        a[i][p] = a[p][i] = ap[i] * cos_theta - aq[i] * sin_theta;
-        a[i][q] = a[q][i] = ap[i] * sin_theta + aq[i] * cos_theta;
-      }
-      a[p][p] = (app + aqq) / 2 + ((app - aqq) / 2) * cos_2theta - apq * sin_2theta;
-      a[q][q] = (app + aqq) / 2 - ((app - aqq) / 2) * cos_2theta + apq * sin_2theta;
-      a[p][q] = a[q][p] = 0;
-      // update the approximation of the eigen vectors
-      std::vector<double> ev_p(n), ev_q(n);
-      for(int i = 0; i < n; i++) {
-        ev_p[i] = eigen_vectors[i][p];
-        ev_q[i] = eigen_vectors[i][q];
-      }
-      for(int i = 0; i < n; i++) {
-        eigen_vectors[i][p] = ev_p[i] * cos_theta - ev_q[i] * sin_theta;
-        eigen_vectors[i][q] = ev_p[i] * sin_theta + ev_q[i] * cos_theta;
-      }
-    };
-
-    while(true){
-      givens_rotate();
-      double max_non_diag = 0;
-      for(int i = 0; i < n; i++) {
-        for(int j = i + 1; j < n; j++) {
-          max_non_diag = std::max(max_non_diag, a[i][j]);
-        }
-      }
-      if( max_non_diag < eps ) break;
-    }
-    std::vector<std::tuple<double, std::vector<double>>> eigen;
-    for(int i = 0; i < n; i++) {
-      std::vector<double> ev(n);
-      for(int k = 0; k < n; k++) {
-        ev[k] = eigen_vectors[k][i];
-      }
-      eigen.emplace_back(a[i][i], ev);
-    }
-
-    auto comp = [](const std::tuple<double, std::vector<double>> & a, const std::tuple<double, std::vector<double>> & b) -> bool {
-      return std::abs(std::get<0>(a)) < std::abs(std::get<0>(b));
-    };
-    std::sort(eigen.begin(), eigen.end(), comp);
-    std::reverse(eigen.begin(), eigen.end());
-    return eigen;
-  }
-
-  std::vector<std::tuple<double, std::vector<double>>> SymmetricMatrix::get_eigen_householder_binarysearch() const {
-    if(mat.size() == 1) return {{mat[0][0], {1}}};
-    auto [T, vs] = tridiagonalize();
-    std::size_t size = T.rows();
-
-    std::cout << "tridiagonalized" << std::endl;
-
-    /*
-    * p:
-    *   argument: l
-    *   return value: ps
-    *     - ps[ps.size() - k] = det (lI - T)_k where X_l is the k-th principal submatrix of X.
-    */
-    auto p = [&T, size](double lambda) -> std::vector<double> {
-      std::vector<double> ps(size);
-      ps[0] = T[0][0] - lambda;
-      ps[1] = (T[1][1] - lambda) * ps[0] - T[1][0] * T[1][0];
-      for(std::size_t i = 2; i < ps.size(); i++) {
-        double alpha = T[i][i], beta = T[i][i - 1];
-        ps[i] = (alpha - lambda) * ps[i - 1] - beta * beta * ps[i - 2];
-      }
-      ps.insert(ps.begin(), 1);
-      return ps;
-    };
-
-    /*
-    * count_alternation:
-    *   argument: v
-    *   return value: c
-    *     - c is the number of alternation of signs of v.
-    */
-    auto count_alternation = [](const std::vector<double> & v) -> unsigned int {
-      unsigned int c = 0;
-      for(std::size_t i = 0; i < v.size(); i++) {
-        if(-eps < v[i] && v[i] < eps) {
-          if(v[i - 1] * v[i + 1] < -eps){ c++; }
-          i++;
-        } else {
-          if(v[i] * v[i-1] < -eps){ c++; }
-        }
-      }
-      return c;
-    };
-
-    // bound is the bound of eigen values by Gerschgorin's theorem.
-    double bound = 0;
-    for(std::size_t i = 0; i < size; i++) {
-      double t = 0;
-      for(std::size_t j = std::max(i - 1, static_cast<std::size_t>(0)); j < std::min(i + 1, size); j++) {
-        t += std::abs(T[i][j]);
-      }
-      bound = std::max(t, bound);
-    }
-
-    // lower(upper)[k] is the lower(upper) bound of the k-th eigen value.
-    std::vector<double> lower(size, -bound);
-    std::vector<double> upper(size, bound);
-    // find the eigen values by binary search.
-    for(int z = 0; z < 100; z++) {
-      for(std::size_t k = 0; k < lower.size(); k++) {
-        double m = (lower[k] + upper[k]) / 2;
-        unsigned int n = count_alternation(p(m));
-        if(n <= k) {
-          lower[k] = m;
-        } else {
-          upper[k] = m;
-        }
-      }
-    }
-
-    // sort by absolute value of eigen values
-    std::sort(lower.begin(), lower.end(), [](double a, double b){ return std::abs(a) < std::abs(b); });
-    std::reverse(lower.begin(), lower.end());
-
-    std::cout << "finished binary serach" << std::endl;
-    for(auto a : lower) {
-      std::cout << a << " ";
-    }
-    std::cout << std::endl;
-
-    // get the eigen vectors of T
-    auto get_eigen_vec = [&T, size](double lambda) {
-      std::vector<double> v(size, 0);
-      // initialize
-      v[0] = 1;
-      v[1] = - (T[0][0] - lambda) * v[0] / T[0][1];
-      for(std::size_t k = 1; k < v.size() - 1; k++) {
-        v[k + 1] = - (T[k][k - 1] * v[k - 1] + (T[k][k] - lambda) * v[k]) / T[k][k + 1];
-      }
-      return (1/norm(v)) * v;
-    };
-    std::vector<std::vector<double>> eigen_vectors;
-    for(std::size_t i = 0; i < lower.size(); i++) {
-      eigen_vectors.push_back(get_eigen_vec(lower[i]));
-    }
-
-    std::cout << "got the eigen vectors of T" << std::endl;
-
-    // get the eigen vectors that we want by inverse Householder transformation
-    int i = 0;
-    for(auto & eigen_vec : eigen_vectors) {
-      std::cout << "#eig = " << i++ << std::endl;
-      for(std::size_t i = vs.size() - 1; ; i--) {
-        auto & v = vs[i];
-        std::size_t idx = i + 1;
-        std::vector<double> tmp(size - idx, 0);
-        for(std::size_t k = idx; k < size; k++) {
-          for(std::size_t l = idx; l < size; l++) {
-            tmp[k - idx] += (((k == l) ? 1 : 0) - 2 * v[k] * v[l]) * eigen_vec[l];
-          }
-        }
-        for(std::size_t k = idx; k < size; k++) {
-          eigen_vec[k] = tmp[k - idx];
-        }
-        if( i == 0 ) break;
-      }
-    }
-
-    std::vector<std::tuple<double, std::vector<double>>> ret;
-    for(std::size_t i = 0; i < lower.size(); i++) {
-      ret.emplace_back(lower[i], eigen_vectors[i]);
-    }
-    return ret;
-  }
-
-  std::tuple<SymmetricMatrix, std::vector<std::vector<double>>> SymmetricMatrix::tridiagonalize() const {
-    std::size_t n = mat.size();
-    auto T = mat;
-    std::vector<std::vector<double>> vs;
-    for(std::size_t i = 0; i < n - 2; i++) {
-      auto [s, v] = householder(T[i], i + 1);
-      vs.push_back(v);
-      T[i][i + 1] = T[i + 1][i] = s;
-      for(std::size_t j = i + 2; j < T.size(); j++) {
-        T[i][j] = T[j][i] = 0;
-      }
-      std::vector<double> d(T.size() - i - 1, 0);
-      std::vector<double> g(T.size() - i - 1, 0);
-      for(std::size_t k = 0; k < d.size(); k++) {
-        for(std::size_t l = 0; l < d.size(); l++) {
-          d[k] += T[i + 1 + k][i + 1 + l] * v[i + 1 + l];
-        }
-      }
-      double tmp = 0;
-      for(std::size_t k = 0; k < d.size(); k++) {
-        tmp += v[i + 1 + k] * d[k];
-      }
-      for(std::size_t k = 0; k < g.size(); k++) {
-        g[k] = 2 * (d[k] - tmp * v[i + 1 + k]);
-      }
-      for(std::size_t k = 0; k < g.size(); k++) {
-        for(std::size_t l = 0; l < g.size();l++) {
-          T[i + 1 + k][i + 1 + l] -= g[k] * v[i + 1 + l] + v[i + 1 + k] * g[l];
-        }
-      }
-    }
-    return {SymmetricMatrix(T), vs};
-  }
-
-  std::tuple<double, std::vector<double>> householder(const std::vector<double> & u, const std::size_t idx) {
-    std::vector<double> v = u;
-    for(std::size_t i = 0; i < idx; i++) v[i] = 0;
-    double s = ((v[idx] >= 0) ? -1 : 1) * norm(v);
-    v[idx] -= s;
-    v = (1/norm(v)) * v;
-    return {s, v};
-  }
 
   double inner_product(const std::vector<double> & v, const std::vector<double> & u) {
     if( v.size() != u.size() ) throw "inner_product: different dimmension!";
@@ -335,17 +52,6 @@ namespace ipds {
       b.push_back(lambda * a[i]);
     }
     return b;
-  }
-
-  std::vector<double> operator * (const Matrix & mat, const std::vector<double> & a) {
-    if( mat.cols() != a.size() ) throw "size is different";
-    std::vector<double> u(mat.rows(), 0);
-    for(std::size_t i = 0; i < mat.rows(); i++) {
-      for(std::size_t j = 0; j < mat.cols(); j++) {
-        u[i] += mat[i][j] * a[j];
-      }
-    }
-    return u;
   }
 
   std::vector<std::vector<double>> orthonormalize(const std::vector<std::vector<double>> & v) {
@@ -398,5 +104,20 @@ namespace ipds {
       projected_points.push_back(project(p, basis_of_subspace));
     }
     return projected_points;
+  }
+
+  std::tuple<std::vector<double>, boost::numeric::ublas::matrix<double>> eigen(const boost::numeric::ublas::symmetric_matrix<double> & A) {
+    namespace ublas = boost::numeric::ublas;
+    std::vector<double> v(A.size1());
+    ublas::matrix<double, ublas::column_major> Q(A.size1(), A.size2());
+    int info;
+    for (std::size_t i = 0; i < A.size1(); ++i) {
+      for (std::size_t j = 0; j <= i; ++j) {
+        Q(j,i) = Q(i, j) = A(i, j);
+      }
+    }
+    info = boost::numeric::bindings::lapack::syevd('V', 'L', Q, v, boost::numeric::bindings::lapack::optimal_workspace());
+    BOOST_UBLAS_CHECK(info == 0, ublas::internal_logic());
+    return {v, Q};
   }
 }
